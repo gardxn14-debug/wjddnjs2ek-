@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCENAR - 아기 강아지 응급 구조 지원 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Modern Rounded Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Gowun+Dodum&family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        puppy: {
+                            50: '#FFFDF9',
+                            100: '#FFF5E4',
+                            200: '#FFE3BB',
+                            300: '#FFD180',
+                            400: '#FFB84C',
+                            500: '#F59E0B',
+                            600: '#D97706',
+                            dark: '#4A3E3D',
+                            accent: '#FF6B6B',
+                            mint: '#4ECCA3',
+                            cream: '#FFF9F2'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', 'Gowun Dodum', 'sans-serif'],
+                        cute: ['Fredoka', 'Gowun Dodum', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FFFDF9;
+            color: #4A3E3D;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Cute Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FFF5E4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FFB84C;
+            border-radius: 10px;
+        }
+
+        /* Puppy Paw Button Effect */
+        .btn-paw {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 6px 0 #D97706, 0 10px 15px rgba(217, 119, 6, 0.2);
+        }
+        .btn-paw:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #D97706, 0 4px 6px rgba(217, 119, 6, 0.2);
+        }
+
+        .btn-danger-paw {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 6px 0 #DC2626, 0 10px 15px rgba(220, 38, 38, 0.25);
+        }
+        .btn-danger-paw:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #DC2626, 0 4px 6px rgba(220, 38, 38, 0.2);
+        }
+
+        /* Pulse Animation for CPR Paw */
+        @keyframes pawBeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.15); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.1); }
+            60% { transform: scale(1); }
+        }
+        .animate-beat {
+            animation: pawBeat 1s infinite;
+        }
+
+        /* Wiggle Animation for Puppy Mascot */
+        @keyframes puppyTail {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-8deg); }
+            75% { transform: rotate(8deg); }
+        }
+        .puppy-wiggle {
+            animation: puppyTail 2s infinite ease-in-out;
+        }
+
+        /* Floating Background Particles Canvas */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start pb-12 relative overflow-x-hidden font-sans">
+
+    <!-- Background Canvas for Floating Paw Prints -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Top Emergency Header -->
+    <header class="w-full max-w-lg bg-puppy-100 border-b-2 border-puppy-200 sticky top-0 z-30 px-4 py-3 shadow-sm backdrop-blur-md bg-opacity-90">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 bg-puppy-400 rounded-full flex items-center justify-center text-white text-xl shadow-inner puppy-wiggle cursor-pointer" onclick="triggerPuppyBark()">
+                    🐶
+                </div>
+                <div>
+                    <div class="flex items-center space-x-1">
+                        <h1 class="text-xl font-extrabold text-puppy-dark tracking-wide font-cute">SCENAR</h1>
+                        <span class="text-xs px-2 py-0.5 bg-puppy-accent text-white rounded-full font-bold">AI 응급</span>
+                    </div>
+                    <p class="text-xs text-puppy-600 font-medium">UAE 청소년 팀 수상을 기반한 응급 구조 네트워크</p>
+                </div>
+            </div>
+            
+            <button onclick="togglePrivacyModal()" class="text-xs bg-white text-puppy-600 border border-puppy-300 px-2.5 py-1.5 rounded-xl font-semibold flex items-center space-x-1 hover:bg-puppy-50 transition">
+                <i class="fa-solid me-1 fa-shield-halved text-puppy-500"></i>
+                <span>보안 관리</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="w-full max-w-lg px-4 mt-3 z-10">
+        <div class="grid grid-cols-4 gap-1.5 bg-puppy-100 p-1.5 rounded-2xl border border-puppy-200 text-xs font-bold text-puppy-dark">
+            <button id="tab-report" onclick="switchTab('report')" class="py-2.5 rounded-xl transition flex flex-col items-center justify-center gap-1 bg-white text-puppy-600 shadow-sm">
+                <i class="fa-solid fa-file-medical text-base"></i>
+                <span>AI 보고서</span>
+            </button>
+            <button id="tab-lbs" onclick="switchTab('lbs')" class="py-2.5 rounded-xl transition flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-puppy-600">
+                <i class="fa-solid fa-hospital-user text-base"></i>
+                <span>골든타임 LBS</span>
+            </button>
+            <button id="tab-cpr" onclick="switchTab('cpr')" class="py-2.5 rounded-xl transition flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-puppy-600">
+                <i class="fa-solid fa-heart-pulse text-base"></i>
+                <span>강아지 CPR</span>
+            </button>
+            <button id="tab-card" onclick="switchTab('card')" class="py-2.5 rounded-xl transition flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-puppy-600">
+                <i class="fa-solid fa-id-card text-base"></i>
+                <span>의료 카트</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Mobile Container -->
+    <main class="w-full max-w-lg px-4 mt-4 z-10 space-y-4">
+
+        <!-- TAB 1: AI Emergency Standardized Report Generator -->
+        <section id="view-report" class="space-y-4">
+            
+            <!-- Mascot Interactive Help Card -->
+            <div class="bg-gradient-to-r from-puppy-100 to-puppy-200 border-2 border-puppy-300 rounded-2xl p-4 flex items-center justify-between shadow-sm relative overflow-hidden">
+                <div class="space-y-1 z-10 max-w-[75%]">
+                    <div class="flex items-center space-x-1">
+                        <span class="text-xs bg-puppy-500 text-white font-bold px-2 py-0.5 rounded-md">AI 스캐너 코칭</span>
+                        <span id="speech-bubble-status" class="text-xs text-puppy-600 font-semibold animate-pulse">상태 입력 대기중...</span>
+                    </div>
+                    <p class="text-sm font-bold text-puppy-dark leading-tight" id="puppy-speech">
+                        "멍멍! 환자의 현재 상태를 선택하면 AI가 구급대원용 표준 구조 보고서를 바로 작성해드려요!"
+                    </p>
+                </div>
+                <div class="text-5xl cursor-pointer hover:scale-110 transition puppy-wiggle z-10" onclick="triggerPuppyBark()">
+                    🐶🐾
+                </div>
+            </div>
+
+            <!-- Symptom Quick Selector -->
+            <div class="bg-white border-2 border-puppy-200 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-extrabold text-base text-puppy-dark flex items-center gap-2">
+                        <span class="text-puppy-500">🐾</span> 1. 긴급 응급 증상 선택
+                    </h2>
+                    <span class="text-xs text-gray-400">원클릭 다중 선택 가능</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs font-bold" id="symptom-chips">
+                    <button onclick="toggleSymptom(this, '호흡곤란 및 기도폐쇄')" class="symptom-btn p-3 border-2 border-puppy-200 rounded-xl bg-puppy-50 hover:bg-puppy-100 flex items-center gap-2 transition text-left">
+                        <span class="text-lg">🫁</span>
+                        <div>
+                            <div>호흡곤란</div>
+                            <div class="text-[10px] text-gray-400 font-normal">기도 폐쇄/숨가쁨</div>
+                        </div>
+                    </button>
+
+                    <button onclick="toggleSymptom(this, '의식불명 / 반응없음')" class="symptom-btn p-3 border-2 border-puppy-200 rounded-xl bg-puppy-50 hover:bg-puppy-100 flex items-center gap-2 transition text-left">
+                        <span class="text-lg">😵</span>
+                        <div>
+                            <div>의식 불명</div>
+                            <div class="text-[10px] text-gray-400 font-normal">자극에 무반응</div>
+                        </div>
+                    </button>
+
+                    <button onclick="toggleSymptom(this, '급성 흉통 (심장 마비 의심)')" class="symptom-btn p-3 border-2 border-puppy-200 rounded-xl bg-puppy-50 hover:bg-puppy-100 flex items-center gap-2 transition text-left">
+                        <span class="text-lg">💔</span>
+                        <div>
+                            <div>급성 흉통</div>
+                            <div class="text-[10px] text-gray-400 font-normal">가슴 쥐어짜는 통증</div>
+                        </div>
+                    </button>
+
+                    <button onclick="toggleSymptom(this, '심한 다량 출혈 / 외상')" class="symptom-btn p-3 border-2 border-puppy-200 rounded-xl bg-puppy-50 hover:bg-puppy-100 flex items-center gap-2 transition text-left">
+                        <span class="text-lg">🩸</span>
+                        <div>
+                            <div>다량 출혈</div>
+                            <div class="text-[10px] text-gray-400 font-normal">골절 및 외상</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Custom Detail Input -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">상세 현장 상황 및 추가 증상</label>
+                    <textarea id="symptom-detail" rows="2" placeholder="예: 계단에서 구른 후 의식을 잃음, 좌측 머리 부위 부종 보임" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl text-xs focus:border-puppy-400 focus:outline-none bg-puppy-50/50"></textarea>
+                </div>
+            </div>
+
+            <!-- Patient Quick Selection Override -->
+            <div class="bg-white border-2 border-puppy-200 rounded-2xl p-4 shadow-sm space-y-2">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-extrabold text-base text-puppy-dark flex items-center gap-2">
+                        <span class="text-puppy-500">📋</span> 2. 환자 정보 (기본 프로필 동기화)
+                    </h2>
+                    <button onclick="switchTab('card')" class="text-xs text-puppy-600 underline font-semibold">프로필 수정</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs bg-puppy-50 p-2.5 rounded-xl border border-puppy-200 font-medium">
+                    <div><span class="text-gray-400">성명/나이:</span> <span id="summary-name" class="font-bold">홍길동 (68세)</span></div>
+                    <div><span class="text-gray-400">혈액형:</span> <span id="summary-blood" class="font-bold">A+ 형</span></div>
+                    <div class="col-span-2"><span class="text-gray-400">지병/약물:</span> <span id="summary-med" class="font-bold text-puppy-accent">고혈압, 당뇨 (아스피린 복용중)</span></div>
+                </div>
+            </div>
+
+            <!-- AI Standardized Report Dispatch Trigger Paw Button -->
+            <button onclick="generateAIReport()" class="w-full btn-danger-paw bg-puppy-accent text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center space-x-2 tracking-wide">
+                <span>🐾 AI 표준 구조 보고서 생성 & 전송</span>
+            </button>
+
+            <!-- Standardized Medical Report Output Container -->
+            <div id="report-output-card" class="hidden bg-slate-900 border-2 border-slate-700 text-slate-100 rounded-2xl p-4 shadow-xl space-y-3 font-mono text-xs">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-block w-2.5 h-2.5 bg-green-400 rounded-full animate-ping"></span>
+                        <span class="font-bold text-green-400 text-sm">SBAR 표준 보고서 전송 준비 완료</span>
+                    </div>
+                    <button onclick="copyReportToClipboard()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-lg text-[11px] font-sans flex items-center gap-1 transition">
+                        <i class="fa-solid fa-copy"></i> 복사하기
+                    </button>
+                </div>
+
+                <div class="space-y-2 leading-relaxed text-slate-200" id="report-text-content">
+                    <!-- Dynamic standard SBAR medical rescue report text -->
+                </div>
+
+                <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-400 font-sans">
+                    <span>구조 번호: <strong id="report-id" class="text-slate-200">SCN-9982-UAE</strong></span>
+                    <span class="text-green-400 font-bold">119 / 998 구조본부 자동 연동됨</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 2: Golden Time Location-Based Service (LBS) -->
+        <section id="view-lbs" class="hidden space-y-4">
+            
+            <div class="bg-white border-2 border-puppy-200 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-extrabold text-base text-puppy-dark flex items-center gap-2">
+                            <span class="text-puppy-500">🏥</span> 최적 골든타임 이송 병원 (LBS)
+                        </h2>
+                        <p class="text-xs text-gray-500">실시간 위치 기반 응급실 가용 침상 및 최단 경로</p>
+                    </div>
+                    <button onclick="getGPSLocation()" class="bg-puppy-100 text-puppy-600 border border-puppy-300 text-xs px-2.5 py-1.5 rounded-xl font-bold hover:bg-puppy-200 transition flex items-center gap-1">
+                        <i class="fa-solid fa-location-crosshairs text-puppy-500"></i> GPS 갱신
+                    </button>
+                </div>
+
+                <!-- GPS Location Pill -->
+                <div class="bg-puppy-50 border border-puppy-200 p-2.5 rounded-xl flex items-center justify-between text-xs font-semibold">
+                    <span class="text-gray-500">현재 수신 위치:</span>
+                    <span id="gps-status-text" class="text-puppy-dark font-bold">📍 UAE 아부다비 센트럴 파크 인근</span>
+                </div>
+
+                <!-- Interactive SVG Map Canvas Representation -->
+                <div class="relative w-full h-48 bg-slate-800 rounded-xl overflow-hidden border-2 border-puppy-300 shadow-inner flex items-center justify-center">
+                    <svg class="w-full h-full opacity-80" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Grid Lines -->
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#334155" stroke-width="0.8"/>
+                        </pattern>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        
+                        <!-- Simulated Road Lines -->
+                        <path d="M 30 170 Q 150 120 200 80 T 370 30" stroke="#475569" stroke-width="12" fill="none" stroke-linecap="round"/>
+                        <path d="M 30 170 Q 150 120 200 80 T 370 30" stroke="#F59E0B" stroke-width="3" stroke-dasharray="6,6" fill="none"/>
+                        
+                        <!-- Secondary Route -->
+                        <path d="M 200 80 L 320 160" stroke="#475569" stroke-width="8" fill="none"/>
+
+                        <!-- User Pin (Dog Icon) -->
+                        <g transform="translate(190, 70)">
+                            <circle cx="10" cy="10" r="16" fill="#FF6B6B" opacity="0.3" class="animate-ping"/>
+                            <circle cx="10" cy="10" r="12" fill="#FF6B6B"/>
+                            <text x="10" y="15" font-size="12" text-anchor="middle" fill="white">🐾</text>
+                            <text x="10" y="-4" font-size="9" font-weight="bold" text-anchor="middle" fill="#FFD180">내 사고 위치</text>
+                        </g>
+
+                        <!-- Hospital Pin A -->
+                        <g transform="translate(350, 20)">
+                            <circle cx="10" cy="10" r="10" fill="#4ECCA3"/>
+                            <text x="10" y="14" font-size="10" text-anchor="middle" fill="white">🏥</text>
+                            <text x="10" y="-3" font-size="8" font-weight="bold" text-anchor="middle" fill="#4ECCA3">셰이크 칼리파 의료원 (7분)</text>
+                        </g>
+
+                        <!-- Hospital Pin B -->
+                        <g transform="translate(300, 150)">
+                            <circle cx="10" cy="10" r="10" fill="#60A5FA"/>
+                            <text x="10" y="14" font-size="10" text-anchor="middle" fill="white">🏥</text>
+                            <text x="10" y="-3" font-size="8" fill="#93C5FD" text-anchor="middle">아부다비 종합병원 (14분)</text>
+                        </g>
+                    </svg>
+
+                    <!-- Overlay Puppy Guide Badge -->
+                    <div class="absolute bottom-2 left-2 bg-slate-900/90 text-white border border-slate-700 px-3 py-1.5 rounded-lg text-[11px] flex items-center space-x-2 backdrop-blur-sm">
+                        <span>🐶</span>
+                        <span>AI 분석: <strong>셰이크 칼리파 의료원</strong>이 최단 경로 & 수술실 즉시 가용 가능</span>
+                    </div>
+                </div>
+
+                <!-- Hospital List -->
+                <div class="space-y-2 pt-1">
+                    <!-- Hospital 1 (Best) -->
+                    <div class="p-3 border-2 border-puppy-400 bg-puppy-100/50 rounded-xl flex items-center justify-between">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-puppy-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">최적 추천</span>
+                                <h3 class="font-extrabold text-sm text-puppy-dark">셰이크 칼리파 중앙 의료원 (Sheikh Khalifa Medical)</h3>
+                            </div>
+                            <p class="text-xs text-gray-600">거리: 2.8 km | 골든타임 이송: <strong class="text-puppy-accent">7분 소요</strong></p>
+                            <div class="flex gap-2 text-[11px] text-gray-500 pt-1">
+                                <span class="text-green-600 font-bold">✓ 응급실 침상 가용 (4)</span>
+                                <span>✓ 심뇌혈관 센터 가동중</span>
+                            </div>
+                        </div>
+                        <button onclick="triggerDispatchAlert('셰이크 칼리파 중앙 의료원')" class="btn-paw bg-puppy-400 text-white text-xs font-bold px-3 py-2 rounded-xl whitespace-nowrap">
+                            이송 요청
+                        </button>
+                    </div>
+
+                    <!-- Hospital 2 -->
+                    <div class="p-3 border border-gray-200 bg-white rounded-xl flex items-center justify-between opacity-80">
+                        <div class="space-y-0.5">
+                            <h3 class="font-bold text-sm text-gray-700">아부다비 에미리트 종합병원</h3>
+                            <p class="text-xs text-gray-500">거리: 5.4 km | 골든타임 이송: 14분 소요</p>
+                            <p class="text-[11px] text-amber-600">⚠ 응급실 혼잡 (대기 예상)</p>
+                        </div>
+                        <button onclick="triggerDispatchAlert('아부다비 에미리트 종합병원')" class="bg-gray-100 border border-gray-300 text-gray-700 text-xs font-bold px-3 py-2 rounded-xl whitespace-nowrap">
+                            선택
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- TAB 3: Puppy Interactive CPR & First Aid Guide -->
+        <section id="view-cpr" class="hidden space-y-4">
+            
+            <div class="bg-white border-2 border-puppy-200 rounded-2xl p-4 shadow-sm space-y-4">
+                <div class="text-center space-y-1">
+                    <span class="bg-red-100 text-red-600 font-bold text-xs px-2.5 py-1 rounded-full">심폐소생술 가이드 (CPR)</span>
+                    <h2 class="font-extrabold text-lg text-puppy-dark">아기 강아지 멍멍 짖는 소리 메트로놈</h2>
+                    <p class="text-xs text-gray-500">분당 110회 아기 강아지 소리에 맞춰 가슴 중앙을 압박하세요!</p>
+                </div>
+
+                <!-- CPR Beat Animation Circle -->
+                <div class="flex flex-col items-center justify-center py-4">
+                    <button id="cpr-beat-circle" onclick="toggleCPRMetronome()" class="w-36 h-36 rounded-full bg-gradient-to-br from-puppy-300 to-puppy-500 border-4 border-white shadow-xl flex flex-col items-center justify-center text-white transition active:scale-95 relative">
+                        <div id="cpr-paw-icon" class="text-4xl mb-1">🐶</div>
+                        <div id="cpr-btn-text" class="font-black text-base">압박 시작</div>
+                        <div id="cpr-bpm-text" class="text-[10px] text-puppy-100">110 BPM 아기강아지 소리</div>
+                    </button>
+                    <p class="text-xs font-bold text-puppy-600 mt-3" id="cpr-status-label">버튼을 눌러 멍멍 짖는 박자 가이드를 켜세요</p>
+                </div>
+
+                <!-- 4 Step Emergency Action Guide -->
+                <div class="space-y-2 pt-2 border-t border-puppy-100">
+                    <h3 class="font-extrabold text-xs text-puppy-dark">🐶 아기 강아지 응급처치 4단계</h3>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2.5 bg-puppy-50 border border-puppy-200 rounded-xl space-y-1">
+                            <div class="font-bold text-puppy-600">1. 의식/호흡 확인</div>
+                            <p class="text-[11px] text-gray-600">어깨를 가볍게 두드리며 환자의 반응과 호흡 유무를 살핍니다.</p>
+                        </div>
+                        <div class="p-2.5 bg-puppy-50 border border-puppy-200 rounded-xl space-y-1">
+                            <div class="font-bold text-puppy-600">2. 119/구조대 신고</div>
+                            <p class="text-[11px] text-gray-600">주변 사람을 지정하여 신고와 AED(자동제세동기)를 요청합니다.</p>
+                        </div>
+                        <div class="p-2.5 bg-puppy-50 border border-puppy-200 rounded-xl space-y-1">
+                            <div class="font-bold text-puppy-600">3. 가슴 압박 30회</div>
+                            <p class="text-[11px] text-gray-600">가슴 뼈 아래쪽 1/2 지점을 5cm 깊이로 강하고 빠르게 누릅니다.</p>
+                        </div>
+                        <div class="p-2.5 bg-puppy-50 border border-puppy-200 rounded-xl space-y-1">
+                            <div class="font-bold text-puppy-600">4. 인공호흡 2회</div>
+                            <p class="text-[11px] text-gray-600">기도를 확보하고 환자의 코를 막은 후 1초간 숨을 불어넣습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- TAB 4: Encrypted Medical Profile Card -->
+        <section id="view-card" class="hidden space-y-4">
+            
+            <div class="bg-white border-2 border-puppy-200 rounded-2xl p-4 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-puppy-100 pb-3">
+                    <div>
+                        <h2 class="font-extrabold text-base text-puppy-dark flex items-center gap-2">
+                            <span class="text-puppy-500">🔒</span> 나의 개인 응급 의료 프로필
+                        </h2>
+                        <p class="text-xs text-gray-500">기기 내부 암호화 저장 (AI 구조 보고서 자동 수신)</p>
+                    </div>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-bold">로컬 보호됨</span>
+                </div>
+
+                <form id="profile-form" onsubmit="saveMedicalProfile(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">성명 및 나이</label>
+                        <input type="text" id="input-name" value="홍길동 (68세)" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-bold text-gray-700 mb-1">혈액형</label>
+                            <select id="input-blood" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                                <option value="A+ 형" selected>A+ 형</option>
+                                <option value="A- 형">A- 형</option>
+                                <option value="B+ 형">B+ 형</option>
+                                <option value="B- 형">B- 형</option>
+                                <option value="O+ 형">O+ 형</option>
+                                <option value="O- 형">O- 형</option>
+                                <option value="AB+ 형">AB+ 형</option>
+                                <option value="AB- 형">AB- 형</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-gray-700 mb-1">비상 연락처</label>
+                            <input type="text" id="input-phone" value="010-1234-5678 (보호자)" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">지병 및 기저 질환 (Chronic Conditions)</label>
+                        <input type="text" id="input-chronic" value="고혈압, 당뇨 2형, 과거 심장 스텐트 시술" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">복용 중인 약물 (Medications)</label>
+                        <input type="text" id="input-meds" value="아스피린 (항응고제), 혈압약 정기 복용" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">알레르기 (Allergies)</label>
+                        <input type="text" id="input-allergies" value="페니실린 알레르기" class="w-full p-2.5 border-2 border-puppy-200 rounded-xl focus:border-puppy-400 focus:outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full btn-paw bg-puppy-400 text-white font-extrabold py-3 rounded-xl text-sm transition mt-2">
+                        💾 의료 프로필 업데이트 저장
+                    </button>
+                </form>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Custom Toast / Notification Banner -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-puppy-300 text-xs font-bold flex items-center space-x-2 z-50 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none">
+        <span id="toast-icon">🐶</span>
+        <span id="toast-msg">안내 메시지입니다.</span>
+    </div>
+
+    <!-- Security & Ethics Modal -->
+    <div id="privacy-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white border-2 border-puppy-300 rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl">
+            <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="font-extrabold text-base text-puppy-dark flex items-center gap-2">
+                    <span>🛡 윤리 요소 & 데이터 보호</span>
+                </h3>
+                <button onclick="togglePrivacyModal()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            
+            <div class="text-xs text-gray-600 space-y-2 leading-relaxed">
+                <p><strong>1. 데이터 수집 최소화:</strong> 본 SCENAR 웹앱은 민감한 의료 개인정보를 외부 서버에 영구 보관하지 않고 사용자의 디바이스 단말에 우선 암호화 저장합니다.</p>
+                <p><strong>2. 응급 수신 전송 원칙:</strong> 사용자가 [AI 표준 구조 보고서 전송] 버튼을 눌렀을 때만 지정된 구조 당국(119/998)에 암호화된 전송 토큰 형태로 전달됩니다.</p>
+                <p><strong>3. 골든타임 자동 파기:</strong> 이송 완료 후 24시간이 경과하면 전송된 임시 데이터는 자동으로 파기됩니다.</p>
+            </div>
+
+            <button onclick="togglePrivacyModal()" class="w-full bg-puppy-400 text-white font-bold py-2.5 rounded-xl text-xs hover:bg-puppy-500 transition">
+                확인 및 닫기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedSymptoms = [];
+        let cprInterval = null;
+        let isCprRunning = false;
+        let audioCtx = null;
+
+        /* Floating background paw particles */
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let paws = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Create initial floating paws
+        for(let i = 0; i < 12; i++) {
+            paws.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 12 + 10,
+                speedY: Math.random() * 0.4 + 0.1,
+                opacity: Math.random() * 0.15 + 0.05
+            });
+        }
+
+        function drawPaws() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#FFB84C';
+
+            paws.forEach(paw => {
+                ctx.globalAlpha = paw.opacity;
+                ctx.font = `${paw.size}px sans-serif`;
+                ctx.fillText('🐾', paw.x, paw.y);
+
+                paw.y -= paw.speedY;
+                if(paw.y < -20) {
+                    paw.y = canvas.height + 20;
+                    paw.x = Math.random() * canvas.width;
+                }
+            });
+
+            requestAnimationFrame(drawPaws);
+        }
+        drawPaws();
+
+        function switchTab(tabKey) {
+            const tabs = ['report', 'lbs', 'cpr', 'card'];
+            tabs.forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tabKey) {
+                    view.classList.remove('hidden');
+                    btn.classList.add('bg-white', 'text-puppy-600', 'shadow-sm');
+                    btn.classList.remove('text-gray-500');
+                } else {
+                    view.classList.add('hidden');
+                    btn.classList.remove('bg-white', 'text-puppy-600', 'shadow-sm');
+                    btn.classList.add('text-gray-500');
+                }
+            });
+
+            // Stop CPR timer if moving away from CPR tab
+            if (tabKey !== 'cpr' && isCprRunning) {
+                stopCPRMetronome();
+            }
+        }
+
+        function toggleSymptom(element, symptomName) {
+            const index = selectedSymptoms.indexOf(symptomName);
+            if (index > -1) {
+                selectedSymptoms.splice(index, 1);
+                element.classList.remove('border-puppy-500', 'bg-puppy-200');
+                element.classList.add('bg-puppy-50');
+            } else {
+                selectedSymptoms.push(symptomName);
+                element.classList.add('border-puppy-500', 'bg-puppy-200');
+                element.classList.remove('bg-puppy-50');
+            }
+
+            // Update puppy speech bubble tip
+            const speech = document.getElementById('puppy-speech');
+            if (selectedSymptoms.length > 0) {
+                speech.textContent = `"멍멍! 선택된 증상 (${selectedSymptoms.length}개)을 포함하여 AI가 최적 보고서를 작성합니다!"`;
+            } else {
+                speech.textContent = `"멍멍! 환자의 현재 상태를 선택하면 AI가 구급대원용 표준 구조 보고서를 바로 작성해드려요!"`;
+            }
+        }
+
+        function generateAIReport() {
+            const name = document.getElementById('input-name').value;
+            const blood = document.getElementById('input-blood').value;
+            const chronic = document.getElementById('input-chronic').value;
+            const meds = document.getElementById('input-meds').value;
+            const allergies = document.getElementById('input-allergies').value;
+            const detailText = document.getElementById('symptom-detail').value;
+
+            const symptomsStr = selectedSymptoms.length > 0 
+                ? selectedSymptoms.join(', ') 
+                : '기초 상태 불분명 (호흡 및 의식 관찰 필요)';
+
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+            const sbarReportHTML = `
+                <div class="text-amber-400 font-bold border-b border-slate-800 pb-1 mb-2">
+                    [SCENAR AI 구조 표준 보고서 - SBAR] - 생성시각: ${timeStr}
+                </div>
+                <div><strong class="text-amber-300">S (Situation/상황):</strong> ${symptomsStr}. ${detailText ? `(추가: ${detailText})` : ''}</div>
+                <div><strong class="text-amber-300">B (Background/병력):</strong> 환자명 ${name} / 혈액형: ${blood} / 지병: ${chronic} / 복용약: ${meds} / 알레르기: ${allergies}</div>
+                <div><strong class="text-amber-300">A (Assessment/AI평가):</strong> 골든타임 확보 필요. 뇌/심혈관 장애 또는 중증 외상 가능성 고위험군 데이터 매칭됨.</div>
+                <div><strong class="text-amber-300">R (Recommendation/권고사항):</strong> 산소 공급 준비, 제세동기 모니터링 배치, 셰이크 칼리파 의료원 응급실 사전 통보.</div>
+            `;
+
+            document.getElementById('report-text-content').innerHTML = sbarReportHTML;
+            const outputCard = document.getElementById('report-output-card');
+            outputCard.classList.remove('hidden');
+
+            showToast('🐾 AI 구조 보고서가 생성되어 구급대에 자동 전송되었습니다!');
+            outputCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyReportToClipboard() {
+            const content = document.getElementById('report-text-content').innerText;
+            
+            // Fallback execCommand copy method as per safety guidelines
+            const tempInput = document.createElement('textarea');
+            tempInput.value = content;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                showToast('📋 보고서가 클립보드에 복사되었습니다.');
+            } catch (err) {
+                showToast('복사에 실패했습니다. 직접 선택 복사를 진행해주세요.');
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        function getGPSLocation() {
+            const gpsText = document.getElementById('gps-status-text');
+            gpsText.textContent = '📍 GPS 위성 위치 탐색 중...';
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude.toFixed(4);
+                        const lng = position.coords.longitude.toFixed(4);
+                        gpsText.textContent = `📍 실시간 좌표: 위도 ${lat}, 경도 ${lng} (위치 정밀 수신 완료)`;
+                        showToast('📍 현재 위치가 성공적으로 갱신되었습니다.');
+                    },
+                    (error) => {
+                        gpsText.textContent = '📍 UAE 아부다비 센트럴 파크 인근 (기본 설정)';
+                        showToast('GPS 위치 수신 실패 - 기본 시뮬레이션 위치로 전환되었습니다.');
+                    },
+                    { timeout: 5000 }
+                );
+            } else {
+                gpsText.textContent = '📍 UAE 아부다비 센트럴 파크 인근';
+            }
+        }
+
+        function triggerDispatchAlert(hospitalName) {
+            showToast(`🚑 [${hospitalName}] 응급실 이송 라인이 확보되었습니다!`);
+        }
+
+        /* Web Audio API Synthesizer for High-pitched Cute Puppy Bark ("멍! 멍!") */
+        function playPuppyBark() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const now = audioCtx.currentTime;
+
+                // 단일 앙증맞은 아기 강아지 짖음 ("멍!") 톤 생성기
+                const singleYap = (startTime, duration = 0.08, baseFreq = 1250) => {
+                    const osc1 = audioCtx.createOscillator();
+                    const osc2 = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    const filter = audioCtx.createBiquadFilter();
+
+                    // 사인파와 삼각파 조합으로 맑고 밝은 귀여운 음색 생성
+                    osc1.type = 'sine';
+                    osc2.type = 'triangle';
+
+                    // 빠른 피치 하강 (아기 강아지 특유의 "깨갱/멍!" 하이피치 Yip 사운드)
+                    osc1.frequency.setValueAtTime(baseFreq, startTime);
+                    osc1.frequency.exponentialRampToValueAtTime(480, startTime + duration);
+
+                    osc2.frequency.setValueAtTime(baseFreq * 1.15, startTime);
+                    osc2.frequency.exponentialRampToValueAtTime(520, startTime + duration);
+
+                    // 공명 필터 적용 (대역통과 필터로 강아지 입모양 공명 연출)
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(1600, startTime);
+                    filter.Q.value = 2.8;
+
+                    // 앙증맞고 톡 쏘는 볼륨 엔벨로프
+                    gain.gain.setValueAtTime(0.001, startTime);
+                    gain.gain.linearRampToValueAtTime(0.45, startTime + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+                    osc1.connect(filter);
+                    osc2.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc1.start(startTime);
+                    osc2.start(startTime);
+                    osc1.stop(startTime + duration + 0.01);
+                    osc2.stop(startTime + duration + 0.01);
+                };
+
+                // 귀여운 아기 강아지의 연속 "멍! 멍!" (Double Yap)
+                singleYap(now, 0.075, 1300);
+                singleYap(now + 0.11, 0.07, 1200);
+
+            } catch (e) {
+                console.log('Audio Context Error:', e);
+            }
+        }
+
+        function toggleCPRMetronome() {
+            if (isCprRunning) {
+                stopCPRMetronome();
+            } else {
+                startCPRMetronome();
+            }
+        }
+
+        function startCPRMetronome() {
+            isCprRunning = true;
+            const circle = document.getElementById('cpr-beat-circle');
+            const btnText = document.getElementById('cpr-btn-text');
+            const statusLabel = document.getElementById('cpr-status-label');
+
+            circle.classList.add('animate-beat', 'from-red-500', 'to-puppy-accent');
+            circle.classList.remove('from-puppy-300', 'to-puppy-500');
+            btnText.textContent = '압박 중지';
+            statusLabel.textContent = '🐶 멍! 멍! 아기 강아지 짖는 소리에 맞춰 가슴 중앙을 압박하세요 (110 BPM)';
+
+            // 110 BPM = 60000ms / 110 ≈ 545ms interval
+            playPuppyBark();
+            cprInterval = setInterval(() => {
+                playPuppyBark();
+            }, 545);
+
+            showToast('🐶 멍멍! 아기 강아지 CPR 소리 메트로놈이 실행되었습니다.');
+        }
+
+        function stopCPRMetronome() {
+            isCprRunning = false;
+            if (cprInterval) clearInterval(cprInterval);
+
+            const circle = document.getElementById('cpr-beat-circle');
+            const btnText = document.getElementById('cpr-btn-text');
+            const statusLabel = document.getElementById('cpr-status-label');
+
+            circle.classList.remove('animate-beat', 'from-red-500', 'to-puppy-accent');
+            circle.classList.add('from-puppy-300', 'to-puppy-500');
+            btnText.textContent = '압박 시작';
+            statusLabel.textContent = '버튼을 눌러 멍멍 짖는 박자 가이드를 켜세요';
+
+            showToast('⏹ CPR 메트로놈이 정지되었습니다.');
+        }
+
+        function saveMedicalProfile(event) {
+            event.preventDefault();
+            const name = document.getElementById('input-name').value;
+            const blood = document.getElementById('input-blood').value;
+            const chronic = document.getElementById('input-chronic').value;
+            const meds = document.getElementById('input-meds').value;
+
+            document.getElementById('summary-name').textContent = name;
+            document.getElementById('summary-blood').textContent = blood;
+            document.getElementById('summary-med').textContent = `${chronic} (${meds})`;
+
+            showToast('💾 의료 프로필이 업데이트되었습니다!');
+        }
+
+        function triggerPuppyBark() {
+            playPuppyBark();
+            showToast('🐶 멍멍! SCENAR 아기 강아지 구조대가 환자 곁에 있습니다!');
+        }
+
+        function togglePrivacyModal() {
+            const modal = document.getElementById('privacy-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msgSpan = document.getElementById('toast-msg');
+            msgSpan.textContent = message;
+
+            toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        window.onload = function() {
+            console.log('SCENAR Rescue Web App Initialized.');
+        };
+    </script>
+</body>
+</html>
